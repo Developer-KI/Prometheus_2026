@@ -1,2 +1,2 @@
 # Prometheus_2026
-Team A
+Short volatility strategy
