@@ -13,25 +13,25 @@ class MSGARCHVolatilitySelling(QCAlgorithm):
         self.set_end_date(2024, 3, 1)
         self.set_cash(1000000)
         
-        # --- Strategy Parameters ---
-        self.lookback = 504
-        self.refit_days = 5
-        self.mc_sims = 1000 
-        self.fc_horizon = 5
-        self.dte_target = 2
-        self.max_risk = 0.04
-        self.iv_haircut = 0.00
+        # GARCH & Model Parameters
+        self.lookback = int(self.get_parameter("lookback", 504))
+        self.refit_days = int(self.get_parameter("refit_days", 5))
+        self.mc_sims = int(self.get_parameter("mc_sims", 1000))
+        self.fc_horizon = int(self.get_parameter("fc_horizon", 5))
         
-        # --- Stop Loss Parameter ---
-        # 2.0 means if the straddle value doubles (100% loss of premium), we exit.
-        # 1.5 means if we lose 50% of the premium collected, we exit.
-        self.stop_loss_multiplier = 2.0 
+        # Option Selection Parameters
+        self.dte_target = int(self.get_parameter("dte_target", 2))
+        self.iv_haircut = float(self.get_parameter("iv_haircut", 0.00))
         
-        # --- Signal Thresholds ---
-        self.vrp_strong = 0.10
-        self.vrp_weak = 0.05
-        self.kurt_max = 4.0
-        self.skew_max = 0.5
+        # Risk & Stop Loss Parameters
+        self.max_risk = float(self.get_parameter("max_risk", 0.04))
+        self.stop_loss_multiplier = float(self.get_parameter("stop_loss_mult", 2.0))
+        
+        # Signal Threshold Parameters
+        self.vrp_strong = float(self.get_parameter("vrp_strong", 0.10))
+        self.vrp_weak = float(self.get_parameter("vrp_weak", 0.05))
+        self.kurt_max = float(self.get_parameter("kurt_limit", 4.0))
+        self.skew_max = float(self.get_parameter("skew_limit", 0.5))
 
         # --- Assets ---
         self.spy = self.add_equity("SPY", Resolution.MINUTE)
