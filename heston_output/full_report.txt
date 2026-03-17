@@ -1,0 +1,26 @@
+
+========================================================================
+  HESTON VOL-SELL  ·  FULL BACKTEST
+========================================================================
+  Model               : Heston Stochastic Volatility
+  Period / Days        : 8.0y  (2,004 days)
+  Capital              : $  1,000,000.00  ->  $  1,253,635.94
+  Return / CAGR        : +25.36%  /  +2.88%
+
+  Total P&L            : $   +253,635.94
+  Max Drawdown         : $    -75,507.66  (-7.6%)
+  Sharpe               :  +0.805
+  Sortino              :  +0.220
+
+  Trades               : 936
+  Win Rate             :  19.1%
+  Avg Win / Loss       : $   +3,404.92  /  $   -5,474.54
+  Profit Factor        :  1.71
+
+  Bid-Ask / Leg        : $0.00
+  IV Haircut           :  2%
+  Max-Loss Stop        :  1.0× premium
+========================================================================
+
+
+
