@@ -1,91 +1,62 @@
-# Heston Stochastic-Vol × Short Straddle Strategy
+# CLAUDE.md
 
-## Architecture
+## Purpose
+This file defines the conventions and expectations for how Claude should interact with QuantConnect projects.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Every REFIT_DAYS (default 5):                                  │
-│                                                                 │
-│   Options Chain ──► Heston Calibration ──► QE Monte-Carlo       │
-│   (strikes, mids,    (v0,κ,θ,σᵥ,ρ)        3000 paths × 5d     │
-│    expiries, IVs)                           → vol density       │
-│                                                                 │
-│   Fallback: returns + VIX variance proxy (Euler MLE)            │
-├─────────────────────────────────────────────────────────────────┤
-│  Every trading day:                                             │
-│                                                                 │
-│   Vol Density ──► Signal Gates ──► Half-Kelly Sizer ──► Trade   │
-│   + RV Panel       G1: VRP breadth     tail dampener     ATM    │
-│   + IV (√v0)       G2: IV>RV panel     kurtosis damp    short   │
-│   + Regime         G3: tail contain                     strdl   │
-│                    G4: kurtosis cap                              │
-│                    G5: skew cap                                  │
-│                    G6: regime penalty                            │
-├─────────────────────────────────────────────────────────────────┤
-│  Risk Management:                                               │
-│   • Max-loss stop: 2× premium collected                         │
-│   • Assignment auto-unwind (liquidate underlying)               │
-│   • Max 4% portfolio risk per trade                             │
-│   • 5% notional cap                                             │
-└─────────────────────────────────────────────────────────────────┘
-```
+---
 
-## Heston Model
+## Development Environment
+- Code should be **Python-first**, but C# examples may be used for reference if necessary.
+- The project Id is in the config file, under `cloud-id`. Don't call the `list_backtests` tool unless it's absolutely needed.
+- External dependencies must be avoided unless they are supported in QuantConnect’s cloud environment. When in doubt, suggest native LEAN methods.
+- When drafting code, prefer modular design. Place custom indicators in an `indicators/` directory.
+- Prioritize classic QC algorithm design over the algorithm framework unless explicitly requested.
+- When creating indicator objects (such as RSI, SMA, etc.), never overwrite the indicator method names (e.g., do not assign to `self.rsi`, `self.sma`, etc.). Instead, use a different variable name, preferably with a leading underscore for non-public instance variables (e.g., `self._rsi = self.rsi(self._symbol, 14)`). This prevents conflicts with the built-in indicator methods and ensures code reliability.
+- After adding or editing code, call the compile tool (`create_compile` and `read_compile`) in the QuantConnect MCP server to get the syntax errors and then FIX ALL COMPILE WARNINGS.
 
-The Heston stochastic-volatility model:
 
-```
-dS/S  = (r − q) dt + √v dW₁
-dv    = κ(θ − v) dt + σᵥ √v dW₂
-corr(dW₁, dW₂) = ρ
-```
+---
 
-**Parameters**: v0 (instantaneous variance), κ (mean-reversion speed),
-θ (long-run variance), σᵥ (vol-of-vol), ρ (correlation, typically negative for equities).
+## Data Handling
+- Use QuantConnect’s **built-in dataset APIs** (Equity, Futures, Options, Crypto, FX).  
+- For alternative datasets, reference [QuantConnect’s Data Library](https://www.quantconnect.com/datasets/) and link to documentation rather than suggesting unsupported APIs.
 
-### Calibration Mode 1 — Options Chain (Primary)
+---
 
-Fits all 5 parameters to the cross-section of market option prices using
-vega-weighted least-squares. Gil-Pelaez / Fourier inversion for Heston
-pricing with the "little Heston trap" formulation to avoid branch-cut
-discontinuities. Falls back to differential evolution if L-BFGS-B
-converges poorly.
+## Research Standards
+- Backtest code should include:
+  - A clear `initialize()` with securities, resolution, and cash set explicitly.
+  - Example parameters (start date, end date, cash) that are realistic for production-scale testing.
+  - At least one comment section explaining the strategy’s core logic.
+- When generating new strategies, provide a **one-paragraph explanation** of the trading idea in plain English before showing code.
+- Prefer **transparent, explainable strategies**. Avoid “black-box” style outputs.
 
-### Calibration Mode 2 — Returns + VIX (Fallback)
+---
 
-When the chain is too thin (< 8 usable contracts), uses Euler-discretised
-approximate MLE on log-returns and VIX-implied variance as an observable
-proxy for the latent variance process. Vectorised numpy for speed.
+## Style Guidelines
+- Code must follow **PEP8** where possible.
+- Use **docstrings** on all public classes and functions.
+- Responses should be in **Markdown**, with code blocks fenced by triple backticks and the language identifier.
 
-### Forecast
+---
 
-Andersen Quadratic-Exponential (QE) scheme for variance-path simulation.
-Returns a distribution of annualised realised vol over the forecast horizon.
+## Risk Management
+- Always emphasize risk controls in strategy outputs:
+  - Max position sizing rules.
+  - Stop-loss or drawdown limits.
+  - Portfolio exposure constraints.
+- Always use the `live_mode` flag and log the live mode in `initialize`.
 
-### Key Parameters to Tune
+---
 
-All configurable as class constants at the top of `HestonVolSell`:
+## Security & Compliance
+- Do not reference or fabricate API keys, credentials, or client secrets.
+- Avoid suggesting integrations with unsupported brokers.
+- If a user requests something outside QuantConnect’s compliance boundaries (e.g., high-frequency order spoofing, or prohibited datasets), politely decline.
 
-| Parameter            | Default | Description                           |
-| -------------------- | ------- | ------------------------------------- |
-| `REFIT_DAYS`         | 5       | Recalibrate Heston every N days       |
-| `FC_HORIZON`         | 5       | MC forecast horizon (trading days)    |
-| `MC_SIMS`            | 3000    | Monte-Carlo paths                     |
-| `TARGET_DTE_MIN/MAX` | 1/5     | DTE range for straddle selection      |
-| `MAX_RISK_FRAC`      | 0.04    | Max portfolio % at risk per trade     |
-| `MAX_LOSS_MULT`      | 2.0     | Stop-loss as multiple of premium      |
-| `VRP_STRONG`         | 0.10    | Strong VRP threshold for full signal  |
-| `VRP_WEAK`           | 0.05    | Weak VRP threshold for partial signal |
-| `IV_HAIRCUT`         | 0.02    | Conservative IV adjustment            |
-| `MONEYNESS_BAND`     | 0.15    | Chain filter: ±15% from ATM           |
-| `CHAIN_MIN_OPTIONS`  | 8       | Min contracts for chain calibration   |
+---
 
-### Live Trading Notes
-
-- The strategy uses `market_order` for fills — consider switching to
-  `limit_order` with mid-price for live to reduce slippage.
-- VIX data feed must be active for the fallback calibration path.
-- Monitor Heston parameter stability in logs — κ hitting bounds
-  (30.0) or ρ near 0 may indicate calibration issues.
-- The Feller condition (2κθ > σᵥ²) should generally hold; violations
-  logged as warnings indicate the variance process may hit zero.
+## Tone & Communication
+- Keep responses professional, concise, and explanatory.
+- Prioritize **clarity over cleverness**.  
+- Always explain why you made a design choice if multiple options exist.
