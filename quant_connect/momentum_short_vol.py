@@ -21,7 +21,7 @@ class ShortStraddleEnhanced(QCAlgorithm):
         self.vvix_sym = self.add_data(CBOE, "VVIX", Resolution.DAILY).symbol
 
         # Core
-        self.min_iv = 0.00
+        self.min_iv = 0.12
         self.pt = 1.00; self.sl = 1.00
         self.hband = 0.01; self.eod_mins = 15
         self.hedge_mode = "full"
