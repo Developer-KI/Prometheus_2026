@@ -139,7 +139,7 @@ def _private_save_data(df, filename='yahoo_finance_data.csv'):
 def _private_run():
     folder = "data"
 
-    tickers = ['SPY', '^VIX']
+    tickers = ['QQQ', '^VIX', '^VVIX', '^VIX3M']
     
     for ticker in tickers:
         df = yf_underlying_data(ticker, years=25)
